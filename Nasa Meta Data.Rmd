@@ -1,0 +1,20 @@
+---
+title: "Nasa Meta Data"
+author: "Richard G. Gardiner"
+date: "12/5/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Intro
+
+Disclosure: Most of the information below comes from *Text Mining with R* by David Robinson.  
+
+NASA has tens of thousands of datasets that cover everything from earth science to aeospace enginerring.  We can use metadata for these datasets to understand how they all connect.  The metadata includes the name of the dataset, description, which organization(s) is responsible for the dataset, and keywords.  The metadata is publically available only in JSON format.
+
+Using techniques like tf-idf and topic modeling, we will explose the connections between the different datasets.
+
+# How the data is organized
