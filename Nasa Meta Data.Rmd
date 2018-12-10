@@ -24,7 +24,7 @@ The first we want to do is download the JSON file and look at the names of what 
 ```{r}
 library(jsonlite)
 
-#metadata <- fromJSON("https://data.nasa.gov/data.json")
+metadata <- fromJSON("https://data.nasa.gov/data.json")
 names(metadata$dataset)
 ```
 
@@ -216,7 +216,7 @@ desc_word_pairs %>%
 ```
 
 
-
+This is showing a more complex network (though I had to play with the filter)
 
 
 
