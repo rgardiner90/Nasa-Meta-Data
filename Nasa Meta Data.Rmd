@@ -18,3 +18,205 @@ NASA has tens of thousands of datasets that cover everything from earth science 
 Using techniques like tf-idf and topic modeling, we will explose the connections between the different datasets.
 
 # How the data is organized
+
+The first we want to do is download the JSON file and look at the names of what is stroed in teh metadata
+
+```{r}
+library(jsonlite)
+
+#metadata <- fromJSON("https://data.nasa.gov/data.json")
+names(metadata$dataset)
+```
+
+
+We see here that we could extract a lot of information from who publishes each dataset to what license they are released under.  It seems likely that the title, description, and keywords for each dataset may be the best for connecting the datasets.  Let's check them out:
+
+```{r}
+class(metadata$dataset$title)
+class(metadata$dataset$description)
+class(metadata$dataset$keyword)
+```
+
+The title and description are stored as characters while the keyword is stored as a list.
+
+## Wrangling and Tidying the data
+
+Now we can set up tidy data frames for title, description, and keyword, keeping the data ids for each so we can connect them if necessary for later analysis
+
+```{r}
+library(tidyverse)
+
+nasa_title <- data_frame(id = metadata$dataset$identifier, 
+                         title = metadata$dataset$title)
+
+unique <- unique(nasa_title$id)
+```
+
+
+The book has a different way to capture the id, but it wasn't working and this is the best idea I had for this.  It appears that there may be a little bit of overlap, but that is going to have to do for now (the book also mentions overlap).
+
+
+```{r}
+nasa_description <- data_frame(id = metadata$dataset$identifier,
+                               desc = metadata$dataset$description)
+
+nasa_description %>%
+  select(desc) %>%
+  sample_n(5)
+```
+
+Lastly, we will want to build a tidy data frame for the keywords.  For this one, we need to use `unnest()` from tidyr, because they are in a list-column.
+
+```{r}
+nasa_keyword <- data_frame(id = metadata$dataset$identifier,
+                          keyword = metadata$dataset$keyword) %>%
+  unnest(keyword)
+
+nasa_keyword
+```
+
+This is a tidy data frame where each row is a keyword.  This means there are multiple rows for most of the datasets.
+
+Now we can use the `unnest_tokens()` function for the title and description fiedls so we can start doing text analysis.  We will also remove stop from the descriptions and titles, but not the keywords because they are short-human assigned keywords.
+
+```{r}
+library(tidytext)
+
+nasa_title <- nasa_title %>%
+  unnest_tokens(word, title) %>%
+  anti_join(stop_words)
+
+nasa_description <- nasa_description %>%
+  unnest_tokens(word, desc) %>%
+  anti_join(stop_words)
+```
+
+
+Now they are in a tidy text format with one token (word) per row:
+
+```{r}
+nasa_title
+```
+
+
+```{r}
+nasa_description
+```
+
+
+## Initial Analysis
+
+
+Let's get a list of the most common words in the dataset titles using dplyr.
+
+```{r}
+nasa_title %>%
+  count(word, sort = TRUE)
+```
+
+How about descriptions?
+
+```{r}
+nasa_description %>%
+  count(word, sort = TRUE)
+```
+
+Let's remove some of the words that are used frequently, but are not meaningful to most of us.  This can be done using a custom stop word then doing an anti join.
+
+```{r}
+my_stop_words <- data_frame(word = c(as.character(1:5),
+                                 "ii", "v1.0", "l2", "l3", "1"))
+
+nasa_title <- nasa_title %>%
+  anti_join(my_stop_words)
+
+nasa_description <- nasa_description %>%
+  anti_join(my_stop_words)
+```
+
+What are the most common keywords?
+
+```{r}
+nasa_keyword %>%
+  count(keyword, sort = TRUE)
+```
+
+
+This looks pretty good, but we might want to change all of our text to upper or lower case to get rid of duplicates when we do analysis:
+
+```{r}
+nasa_keyword <- nasa_keyword %>%
+  mutate(keyword = toupper(keyword))
+
+```
+
+# Word co-ocurrences and correlations
+
+Lets examine which words commonly occur together in the title,s descriptions, and keywords of NASA datasets.  This may help us see which datasets are related to each other.
+
+## Networks of description and title words
+
+We can use `pairwise_count()` from widyr package to count how many time each pair of words occur together in a title or description field.
+
+```{r}
+library(widyr)
+
+title_word_pairs <- nasa_title %>%
+  widyr::pairwise_count(word, id, sort = TRUE, upper = FALSE) 
+
+title_word_pairs
+```
+
+These are pairs of words that occur together most often in title fields.  We see a lot of "phase" in this top 10.  Now let's do the same with descriptions:
+
+```{r}
+desc_word_pairs <- nasa_description %>% 
+  widyr::pairwise_count(word, id, sort = TRUE, upper = FALSE)
+
+desc_word_pairs
+```
+
+As with titles, the word "phase" and "system" are pretty common.
+
+
+Let's plot networks of these cooccurring words so we can see these relationships better.  We will use the ggraph package to visualize the networks:
+
+```{r}
+library(ggplot2)
+library(igraph)
+library(ggraph)
+
+
+set.seed(1234)
+title_word_pairs %>%
+  filter(n >= 200) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
+  geom_node_point(size = 3) +
+  geom_node_text(aes(label = name), repel = TRUE,
+                 point.padding = unit(0.2, "lines")) +
+  theme_void()
+
+```
+
+So phase clearly is the key part of this.  Perhaps it is actually too important, but we can deal with that later.  It might be more helpful to do tf-idf as a metric to find characteristic words for each description field.  Let's look at the description fields:
+
+```{r}
+set.seed(1234)
+desc_word_pairs %>%
+  filter(n >= 1200) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "blue") +
+  geom_node_point(size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE,
+                 point.padding = unit(0.2, "lines")) +
+  theme_void()
+```
+
+
+
+
+
+
