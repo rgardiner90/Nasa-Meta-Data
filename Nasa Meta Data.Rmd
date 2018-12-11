@@ -216,7 +216,7 @@ desc_word_pairs %>%
 ```
 
 
-This is showing a more complex network (though I had to play with the filter)
+This is showing a more complex network (though I had to play with the filter).
 
 
 
