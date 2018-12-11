@@ -21,10 +21,10 @@ Using techniques like tf-idf and topic modeling, we will explose the connections
 
 The first we want to do is download the JSON file and look at the names of what is stroed in teh metadata
 
-```{r}
+```{r, cache = TRUE}
 library(jsonlite)
 
-metadata <- fromJSON("https://data.nasa.gov/data.json")
+#metadata <- fromJSON("https://data.nasa.gov/data.json")
 names(metadata$dataset)
 ```
 
@@ -217,6 +217,65 @@ desc_word_pairs %>%
 
 
 This is showing a more complex network (though I had to play with the filter).
+
+Now let's do networks of keywords:
+
+```{r}
+keyword_pairs <- nasa_keyword %>%
+  pairwise_count(keyword, id, sort = TRUE, upper = FALSE)
+
+keyword_pairs
+```
+
+
+```{r}
+set.seed(1234)
+keyword_pairs %>%
+  filter(n >= 200) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "red") +
+  geom_node_point(size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE,
+                 point.padding = unit(0.2, "lines")) +
+  theme_void()
+
+```
+
+
+NOTE: these are the most common keywords occuring together, but they are also in general the most common keywords.
+
+We can also do pairwise correlation with keywords to see which keywords that are more likely to occur together than other keywords.
+
+```{r}
+keyword_cor <- nasa_keyword %>%
+  group_by(keyword) %>%
+  filter(n() >= 50) %>%
+  pairwise_cor(keyword, id, sort = TRUE, upper = FALSE)
+
+keyword_cor
+```
+
+Note that we have a few that always occur together (correlation of 1).  This means that they are redundant keywords.  We can visualize a network of keyword correlations just like the co-occurences.
+
+```{r}
+set.seed(1234)
+keyword_cor %>%
+  filter(correlation > .7) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = correlation, edge_width = correlation), edge_colour = "green") +
+  geom_node_point(size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE,
+                 point.padding = unit(0.2, "lines")) +
+  theme_void()
+
+```
+
+This is rather interesting and different than the co=occurences network.  The main difference is that this graph is asking about which keyword pairs occur more oten together than with other words. In this network, there are a lot of clusters that are independent of each other.  This can be extracted for further analysis.
+
+
+
 
 
 
