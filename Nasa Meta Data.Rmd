@@ -276,6 +276,54 @@ This is rather interesting and different than the co=occurences network.  The ma
 
 
 
+# Calculating tf-idf for the description fields
+
+The results of the pairwise count for the descriptions showed that there are just a few words that dominate the fields.  In this instance, using tf-idf would be great to find words that are espeically important to a document within a collection of documents.  For this example, we will consider each description field a "document" and the entire dataframe as the colelction (corpus) of documents.  Since we have already used the `unnest_tokens()` function, we only need to use the `bind_tf_idf()` function:
+
+```{r}
+desc_tf_idf <- nasa_description %>%
+  count(id, word, sort = TRUE) %>%
+  ungroup() %>%
+  bind_tf_idf(word, id, n)
+
+```
 
 
+```{r}
+desc_tf_idf %>%
+  arrange(-tf_idf)
 
+```
+
+These are teh mostimportant words in teh description fields as measured by tf-idf.  Note that in many fields we have an "n" of 1 and a "tf" of 1 meaning that these were descrption finds that only had a single word in them.  If a document only has one word, the tf-idf algorithm wil think that it is a very important word.
+
+## Connecting description fields to keywords
+
+Now let's plot some of hte most important words, as measured by tf-idf, for a few example keywords used on NASA datasets.  First, we will use dplyr operations to filter for keywords we want to examine and look at the top 15 words for each keyword:
+
+
+```{r}
+desc_tf_idf <- full_join(desc_tf_idf, nasa_keyword, by = "id")
+
+
+desc_tf_idf %>%
+  filter(!near(tf, 1)) %>%
+  filter(keyword %in% c("SOLAR ACTIVITY", "CLOUDS", "NASA HEADQUARTERS",
+                        "ASTROPHYSICS", "GEOGRAPHY", "BUDGET")) %>%
+  arrange(desc(tf_idf)) %>%
+  group_by(keyword) %>%
+  distinct(word, keyword, .keep_all = TRUE) %>%
+  top_n(15, tf_idf) %>%
+  ungroup() %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  ggplot(aes(word, tf_idf, fill = keyword)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~keyword, ncol = 3, scales = "free") +
+  coord_flip() +
+  labs(title = "Highest tf-idf words in NASA metadata description fields",
+       caption = "NASA metadata rom https://data.nasa.gov/data.json",
+       x = NULL, y = "tf-idf")
+
+```
+
+These graphs show us good validity for the tf-idf scores we have developed.  The budget one shows us financial information, OMB, and years.  Geography shows thing we would expect like mapping, maps, and geoogical.  This would help us discover datasets we might want to consider (or searches for datasets).
