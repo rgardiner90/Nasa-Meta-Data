@@ -19,7 +19,7 @@ Using techniques like tf-idf and topic modeling, we will explose the connections
 
 # How the data is organized
 
-The first we want to do is download the JSON file and look at the names of what is stroed in teh metadata
+The first we want to do is download the JSON file and look at the names of what is stored in the metadata
 
 ```{r, cache = TRUE}
 library(jsonlite)
@@ -327,3 +327,47 @@ desc_tf_idf %>%
 ```
 
 These graphs show us good validity for the tf-idf scores we have developed.  The budget one shows us financial information, OMB, and years.  Geography shows thing we would expect like mapping, maps, and geoogical.  This would help us discover datasets we might want to consider (or searches for datasets).
+
+
+# Topic Modeling
+
+The tf-idf scores did give us some insight into the content of the different description fields, but we can try another approach to find out what hte description fields are about.  We can use topic modeling to model each document (description field) as a mixture of topics and each topic as a mixtrue of words.  We are doing to latent Dirichlet allocation (LDA), even though there are multiple options for this.
+
+## Casting to a Document-Term Matrix (DTM)
+
+We need to turn our tidy data into a document term matrix using the `cast_dtm()` function from tidytext package.  Rows in this format correspond to doucments and columns correstond to terms (words); it is a sparse matri and the values are word counts.
+
+Befor we do this though, we should clean up the text a bit to stop using some nonsense words leftover from HTML or other character encoding.  We are doing to use `bind_rows()` to corm a custom stop words list and then do an anti_join again.
+
+```{r}
+custom_stop_word <- bind_rows(stop_words,
+                           data_frame(word = c("nbsp", "amp", "gt", "lt",
+                                               "timesnewromanpsmt", "font",
+                                               "td", "li", "br", "tr", "quot",
+                                               "st", "img", "src", "strong",
+                                               "http", "file", "files",
+                                               as.character(1:12)),
+                                      lexicon = rep("custom", 30)))
+word_counts <- nasa_description %>%
+  anti_join(my_stop_words) %>%
+  count(id, word, sort = TRUE) %>%
+  ungroup()
+
+word_counts
+```
+
+This is the information we need, the number of times each word is used in each document, now we can `cast()` from out tidy text into the dtm format.
+
+```{r}
+desc_dtm <- word_counts %>%
+  cast_dtm(id, word, n)
+
+desc_dtm
+```
+
+We can see that we have the correct number of documents, atht this is pretty much 100% spare, meaning that almost all of the entries in this matrix are zero.  Each non-zero entry corresponds to a cetain word appearing in a certain document.
+
+
+
+
+
