@@ -365,7 +365,25 @@ desc_dtm <- word_counts %>%
 desc_dtm
 ```
 
-We can see that we have the correct number of documents, atht this is pretty much 100% spare, meaning that almost all of the entries in this matrix are zero.  Each non-zero entry corresponds to a cetain word appearing in a certain document.
+We can see that we have the correct number of documents, that this is pretty much 100% spare, meaning that almost all of the entries in this matrix are zero.  Each non-zero entry corresponds to a cetain word appearing in a certain document.
+
+
+### Ready for Topic Modeling
+
+Now we can use the topimodels package to create the LDA model.  We don't know ahead of time how many topics we want, just like k-means clustering.  The authors tried a number of topics (8, 16, 24, 32, and 64), but found that 24 topics is the best.  AT 24 the documents are getting sorted into topics cleanly, but going much beyond that caused the distributions of $\gamma$, the probability that eacch document belongs in each topic, to look worrisome (something to be discussed later).
+
+```{r}
+library(topicmodels)
+
+# this will take a long time to run this model (over 30 minutes now):
+desc_lda <- LDA(desc_dtm, k = 24, control = list(seed = 1234))
+```
+
+The seed control is only here to get same results as the authors.  This is because the stochastic algorithm could have different results depending on where the algorithm started.  Thus we had to specify a `seed`.
+
+
+
+
 
 
 
