@@ -133,7 +133,7 @@ $(document).ready(function () {
 </div>
 <div id="how-the-data-is-organized" class="section level1">
 <h1>How the data is organized</h1>
-<p>The first we want to do is download the JSON file and look at the names of what is stroed in teh metadata</p>
+<p>The first we want to do is download the JSON file and look at the names of what is stored in the metadata</p>
 <pre class="r"><code>library(jsonlite)
 
 metadata &lt;- fromJSON(&quot;https://data.nasa.gov/data.json&quot;)
@@ -159,15 +159,14 @@ names(metadata$dataset)</code></pre>
 <h2>Wrangling and Tidying the data</h2>
 <p>Now we can set up tidy data frames for title, description, and keyword, keeping the data ids for each so we can connect them if necessary for later analysis</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
+<pre><code>## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
 <pre><code>## ✔ ggplot2 3.0.0     ✔ purrr   0.2.4
 ## ✔ tibble  1.4.2     ✔ dplyr   0.7.4
 ## ✔ tidyr   0.8.1     ✔ stringr 1.3.1
 ## ✔ readr   1.1.1     ✔ forcats 0.3.0</code></pre>
-<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ dplyr::filter()  masks stats::filter()
-## ✖ purrr::flatten() masks jsonlite::flatten()
-## ✖ dplyr::lag()     masks stats::lag()</code></pre>
+<pre><code>## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()</code></pre>
 <pre class="r"><code>nasa_title &lt;- data_frame(id = metadata$dataset$identifier, 
                          title = metadata$dataset$title)
 
@@ -182,11 +181,11 @@ nasa_description %&gt;%
 <pre><code>## # A tibble: 5 x 1
 ##   desc                                                                    
 ##   &lt;chr&gt;                                                                   
-## 1 SERVIR is a Spanish acronym for 'Regional Visualization and Monitoring …
-## 2 ASSURE - Aeroelastic / Aeroservoelastic (AE/ASE) Uncertainty and Reliab…
-## 3 not applicable                                                          
-## 4 Development of a rugged, fuel tank compatible, oxygen concentration sen…
-## 5 High voltage (HV) power devices based on silicon carbide (SiC) semicond…</code></pre>
+## 1 &quot;Negative index materials (NIMs) offer tremendous potential for the for…
+## 2 The proposed innovation is a robust, bio-inspired, and self-contained s…
+## 3 &quot;NEI Corporation and University of Florida propose to develop a mixed\n…
+## 4 &lt;p&gt;Innovative research on superior catalytic cathode and solid state el…
+## 5 Compact Terahertz Heterodyne Receivers, Phase II</code></pre>
 <p>Lastly, we will want to build a tidy data frame for the keywords. For this one, we need to use <code>unnest()</code> from tidyr, because they are in a list-column.</p>
 <pre class="r"><code>nasa_keyword &lt;- data_frame(id = metadata$dataset$identifier,
                           keyword = metadata$dataset$keyword) %&gt;%
@@ -578,7 +577,16 @@ desc_dtm</code></pre>
 ## Sparsity           : 100%
 ## Maximal term length: 166
 ## Weighting          : term frequency (tf)</code></pre>
-<p>We can see that we have the correct number of documents, atht this is pretty much 100% spare, meaning that almost all of the entries in this matrix are zero. Each non-zero entry corresponds to a cetain word appearing in a certain document.</p>
+<p>We can see that we have the correct number of documents, that this is pretty much 100% spare, meaning that almost all of the entries in this matrix are zero. Each non-zero entry corresponds to a cetain word appearing in a certain document.</p>
+<div id="ready-for-topic-modeling" class="section level3">
+<h3>Ready for Topic Modeling</h3>
+<p>Now we can use the topimodels package to create the LDA model. We don’t know ahead of time how many topics we want, just like k-means clustering. The authors tried a number of topics (8, 16, 24, 32, and 64), but found that 24 topics is the best. AT 24 the documents are getting sorted into topics cleanly, but going much beyond that caused the distributions of <span class="math inline">\(\gamma\)</span>, the probability that eacch document belongs in each topic, to look worrisome (something to be discussed later).</p>
+<pre class="r"><code>library(topicmodels)
+
+# this will take a long time to run this model (over 30 minutes now):
+desc_lda &lt;- LDA(desc_dtm, k = 24, control = list(seed = 1234))</code></pre>
+<p>The seed control is only here to get same results as the authors. This is because the stochastic algorithm could have different results depending on where the algorithm started. Thus we had to specify a <code>seed</code>.</p>
+</div>
 </div>
 </div>
 
