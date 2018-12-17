@@ -383,6 +383,79 @@ The seed control is only here to get same results as the authors.  This is becau
 
 
 
+### Interpreting the topic model
+
+Now that we have the analysis, lets use the `tidy()` function of the tidytext apcakge to build a tidy data frame that summarises the results of the model.
+
+```{r}
+tidy_lda <- tidy(desc_lda)
+
+tidy_lda
+```
+
+
+The column $\beta$ tells us the probability  of that term being generated from that specific topic for that document.  Some of extremely low and others are not that low.  Let's look at each topic.  Let's examine the top 10 terms for each topic:
+
+```{r}
+top_terms <- tidy_lda %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+top_terms
+```
+
+
+This is too large, so it might be better to visualize this information.
+
+```{r}
+top_terms %>%
+  mutate(term = reorder(term, beta)) %>%
+  group_by(topic, term) %>%    
+  arrange(desc(beta)) %>%  
+  ungroup() %>%
+  mutate(term = factor(paste(term, topic, sep = "__"), 
+                       levels = rev(paste(term, topic, sep = "__")))) %>%
+  ggplot(aes(term, beta, fill = as.factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_x_discrete(labels = function(x) gsub("__.+$", "", x)) +
+  labs(title = "Top 10 terms in each LDA topic",
+       x = NULL, y = expression(beta)) +
+  facet_wrap(~ topic, ncol = 4, scales = "free")
+```
+
+This is a very large graph, which you will need to expand to get a better view.  We can see that "data" appears frequently in these, but that is unsurprising because all of these are datasets. You will see, however, that there are some pretty good grouping for the different topics (some about thermal, some about propulsion, water, etc).  
+
+Now that we have looked at which words are associated with which topics.  Next, let's examine which topics are association with which description fields (i.e. documents).  We will look at the $\gamma$ probability, which is the probaiblity that each document belongs in each topic.  This is also done using the `tidy()` verb.
+
+```{r}
+lda_gamma <- tidy(desc_lda, matrix = "gamma")
+
+lda_gamma
+```
+
+
+Notice that some of hte probaiblities visible at the top of the data frame are low and some are higher.  Our model has assigned a probability to each description belonging to each of the topics we constructed from the set of words.  How are the probabilities distributed?
+
+```{r}
+ggplot(lda_gamma, aes(gamma)) +
+  geom_histogram() +
+  scale_y_log10() +
+  labs(title = "Distribution of probabilities for all topics",
+       y = "Number of documents", x = expression(gamma))
+
+```
+
+First, note that the y-axis is plotted on a log scale, otherwise it is difficult to make out any detail in the plot.  Next, note that $\gamma$ runs from 0 to 1 and that this is the probability that a given document belongs in a given topic.  There are many values near zero, which means there are many documents that do not belong in each topic.  Also, there are a number of values near 1; these are the documents that do belong in each topic.  This distribution shows that documents are being well discriminated as belonging to a topic or not.  We can also look at how the probabilities are distributed within each topic, as we will show below.  
+
+
+
+
+
+
+
 
 
 
