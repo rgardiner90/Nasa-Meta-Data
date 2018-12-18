@@ -451,11 +451,19 @@ ggplot(lda_gamma, aes(gamma)) +
 First, note that the y-axis is plotted on a log scale, otherwise it is difficult to make out any detail in the plot.  Next, note that $\gamma$ runs from 0 to 1 and that this is the probability that a given document belongs in a given topic.  There are many values near zero, which means there are many documents that do not belong in each topic.  Also, there are a number of values near 1; these are the documents that do belong in each topic.  This distribution shows that documents are being well discriminated as belonging to a topic or not.  We can also look at how the probabilities are distributed within each topic, as we will show below.  
 
 
+```{r}
+ggplot(lda_gamma, aes(gamma, fill = as.factor(topic))) +
+  geom_histogram(show.legend = FALSE) +
+  facet_wrap(~topic, ncol = 4) +
+  scale_y_log10() +
+  labs(title = "Distribution of probability for each topic",
+       y = "Number of Documents", x = expression(gamma))
+```
 
 
+Some topics do better than others in classifying the models.  Topic 15 and 21 looks pretty good.  A $\gamma$ of 0 meanas that the document has basically no chance of being in that topic, while a probability of 1 meaning that it is completely in there.  As we can see, there are a lot of documents that fall in the middle.  
 
-
-
+The chart above help in deciding the number of topics (clusters) to have in an LDA model.  At this one, I would think about doing fewer topics.
 
 
 
