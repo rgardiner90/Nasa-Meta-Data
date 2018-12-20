@@ -466,6 +466,52 @@ Some topics do better than others in classifying the models.  Topic 15 and 21 lo
 The chart above help in deciding the number of topics (clusters) to have in an LDA model.  At this one, I would think about doing fewer topics.
 
 
+## Connecting Topic Modeling with Keywords
+
+Now let's do a `full_join()` of the topic models and the keywords to see what relationships we can find.  
+```{r}
+lda_gamma <- full_join(lda_gamma, nasa_keyword, by = c("document" = "id"))
+
+lda_gamma
+```
+
+
+
+Now we can use `filter()` to keep only teh document-topic entries that have probabilities greater thansome cut-off value (we will use 0.9).
+
+```{r}
+top_keywords <- lda_gamma %>%
+  filter(gamma > 0.9) %>%
+  count(topic, keyword, sort = TRUE)
+
+top_keywords
+```
+
+
+
+From here we can look at top keywords for each topic:
+
+```{r}
+top_keywords %>%
+  group_by(topic) %>%
+  top_n(5) %>%
+  group_by(topic, keyword) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(keyword = factor(paste(keyword, topic, sep = "__"),
+                          levels = rev(paste(keyword, topic, sep = "__")))) %>%
+  ggplot(aes(keyword, n, fill = as.factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  labs(title = "Top Keywords of each LDA Topic",
+       x = NULL, y = "Number of Documents") +
+  coord_flip() +
+  scale_x_discrete(labels = function(x) gsub("__.+$", "", x)) +
+  facet_wrap(~topic, ncol = 4, scales = "free")
+```
+
+
+This plot tells us "for the datasets with descriptions fields that have a high probability of belonging to a given topic, which are hte most common human-assigned keywords?"
+
 
 
 
